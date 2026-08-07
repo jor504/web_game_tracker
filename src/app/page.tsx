@@ -1,69 +1,133 @@
-import Image from "next/image";
+import { createClient } from '@/utils/supabase/server'
+import Link from 'next/link'
+import { redirect } from 'next/navigation'
 
-export default function Home() {
+// 1. Tipado estricto para los datos devueltos por el JOIN
+type GameResult = {
+  id: string
+  title: string
+  cover_url: string | null
+  rating: number | null
+  status: { name: string } | null
+  platform: { name: string } | null
+  game_format: { name: string } | null
+}
+
+export default async function HomePage() {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data, error } = await supabase
+    .from('game')
+    .select(`
+      id,
+      title,
+      cover_url,
+      rating,
+      status ( name ),
+      platform ( name ),
+      game_format ( name )
+    `)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error al cargar juegos:', error)
+    return (
+      <div className="p-4 rounded-md bg-red-50 border border-red-200 text-red-600 text-center font-medium">
+        Hubo un error de conexión al cargar tu backlog.
+      </div>
+    )
+  }
+
+  // Hacemos el cast seguro gracias a nuestra interfaz
+  const games = data as unknown as GameResult[]
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="space-y-8">
+      <PageHeader totalGames={games.length} />
+      
+      {games.length === 0 ? (
+        <EmptyState />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+          {games.map((game) => (
+            <GameCard key={game.id} game={game} />
+          ))}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      )}
     </div>
-  );
+  )
+}
+
+// -- Subcomponentes Modulares --
+
+function PageHeader({ totalGames }: { totalGames: number }) {
+  return (
+    <div className="flex items-center justify-between mb-8">
+      <h1 className="text-3xl font-extrabold tracking-tight text-slate-800">Mi Backlog</h1>
+      <span className="bg-blue-100 text-blue-800 text-sm font-semibold px-3 py-1 rounded-full">
+        {totalGames} {totalGames === 1 ? 'Título' : 'Títulos'}
+      </span>
+    </div>
+  )
+}
+
+function EmptyState() {
+  return (
+    <div className="text-center py-16 bg-white border border-slate-200 rounded-xl shadow-sm">
+      <p className="text-slate-500 mb-4">Aún no tienes juegos en tu backlog.</p>
+      <Link href="/add" className="inline-block bg-blue-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+        Agrega tu primer juego
+      </Link>
+    </div>
+  )
+}
+
+function GameCard({ game }: { game: GameResult }) {
+  return (
+    <article className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+      
+      {/* Portada y Badge */}
+      <div className="h-48 bg-slate-100 relative border-b border-slate-100">
+        {game.cover_url ? (
+          <img src={game.cover_url} alt={game.title} className="w-full h-full object-cover" />
+        ) : (
+          <div className="flex items-center justify-center w-full h-full text-slate-400 font-medium text-sm">
+            Sin Portada
+          </div>
+        )}
+        <div className="absolute top-2 right-2 bg-black/75 backdrop-blur-sm text-white text-xs font-bold px-2 py-1 rounded">
+          {game.status?.name || 'Sin estado'}
+        </div>
+      </div>
+
+      {/* Metadatos */}
+      <div className="p-4 flex-1 flex flex-col">
+        <h2 className="text-lg font-bold text-slate-800 line-clamp-1" title={game.title}>
+          {game.title}
+        </h2>
+        
+        <div className="text-xs text-slate-500 mt-1.5 flex gap-2 items-center font-medium">
+          <span className="bg-slate-100 border border-slate-200 px-2 py-0.5 rounded text-slate-700">
+            {game.platform?.name || 'N/A'}
+          </span>
+          <span>•</span>
+          <span>{game.game_format?.name || 'N/A'}</span>
+        </div>
+
+        {/* Footer de la tarjeta */}
+        <div className="mt-auto pt-4 flex items-center justify-between">
+          <span className="text-sm font-semibold text-amber-500">
+            {game.rating ? `★ ${game.rating}/10` : 'Sin calificar'}
+          </span>
+          <Link href={`/edit/${game.id}`} className="text-blue-600 hover:text-blue-800 text-sm font-semibold transition-colors">
+            Editar
+          </Link>
+        </div>
+      </div>
+
+    </article>
+  )
 }
