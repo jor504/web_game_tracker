@@ -1,6 +1,8 @@
 import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { SearchInput } from '@/components/search-input'
+import { DropdownFilters } from '@/components/dropdown-filters'
 
 type GameResult = {
   id: string
@@ -10,6 +12,11 @@ type GameResult = {
   status: { name: string } | null
   platform: { name: string } | null
   game_format: { name: string } | null
+}
+
+type CatalogItem = {
+  id: string
+  name: string
 }
 
 export default async function HomePage({
@@ -23,9 +30,16 @@ export default async function HomePage({
   if (!user) redirect('/login')
 
   const resolvedParams = await searchParams
+  
+  // Extraemos todos los parámetros de la URL
   const isListView = resolvedParams.view === 'list'
+  const searchQuery = typeof resolvedParams.q === 'string' ? resolvedParams.q : ''
+  const platformFilter = typeof resolvedParams.platform === 'string' ? resolvedParams.platform : ''
+  const formatFilter = typeof resolvedParams.format === 'string' ? resolvedParams.format : ''
+  const statusFilter = typeof resolvedParams.status === 'string' ? resolvedParams.status : ''
 
-  const { data, error } = await supabase
+  // 1. Preparamos la consulta base de juegos
+  let query = supabase
     .from('game')
     .select(`
       id,
@@ -36,9 +50,27 @@ export default async function HomePage({
       platform ( name ),
       game_format ( name )
     `)
-    .order('created_at', { ascending: false })
 
-  if (error) {
+  // Aplicamos los filtros dinámicamente si existen
+  if (searchQuery) query = query.ilike('title', `%${searchQuery}%`)
+  if (platformFilter) query = query.eq('platform_id', platformFilter)
+  if (formatFilter) query = query.eq('format_id', formatFilter)
+  if (statusFilter) query = query.eq('status_id', statusFilter)
+
+  // 2. Ejecutamos las 4 consultas en paralelo
+  const [
+    { data: gamesData, error: gamesError },
+    { data: platformsData },
+    { data: formatsData },
+    { data: statusesData }
+  ] = await Promise.all([
+    query.order('created_at', { ascending: false }),
+    supabase.from('platform').select('id, name').order('name'),
+    supabase.from('game_format').select('id, name').order('name'),
+    supabase.from('status').select('id, name').order('name')
+  ])
+
+  if (gamesError) {
     return (
       <div className="p-4 rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-center font-medium">
         Hubo un error de conexión al cargar tu backlog.
@@ -46,14 +78,62 @@ export default async function HomePage({
     )
   }
 
-  const games = data as unknown as GameResult[]
+  const games = gamesData as unknown as GameResult[]
+  
+  const isFiltering = !!searchQuery || !!platformFilter || !!formatFilter || !!statusFilter
 
   return (
     <div className="space-y-8">
-      <PageHeader totalGames={games.length} isListView={isListView} />
       
+      {/* Bloque de Cabecera y Filtros */}
+      <div className="flex flex-col gap-4 mb-8">
+        
+        {/* Título y Toggle de Vista */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-800 dark:text-white">Mi Backlog</h1>
+            <span className="bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 text-sm font-semibold px-3 py-1 rounded-full hidden sm:inline-block">
+              {games.length} {games.length === 1 ? 'Título' : 'Títulos'} {isFiltering && 'filtrados'}
+            </span>
+          </div>
+          
+          <div className="flex bg-slate-200/60 dark:bg-slate-800/80 p-1 rounded-lg border border-slate-200 dark:border-slate-700 transition-colors">
+            <Link 
+              href={{ pathname: '/', query: { ...resolvedParams, view: 'grid' } }}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                !isListView ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              Cuadrícula
+            </Link>
+            <Link 
+              href={{ pathname: '/', query: { ...resolvedParams, view: 'list' } }}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                isListView ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              Lista
+            </Link>
+          </div>
+        </div>
+
+        {/* Componentes de Filtrado */}
+        <div className="flex flex-col gap-3">
+          <div className="w-full">
+            <SearchInput />
+          </div>
+          <DropdownFilters 
+            platforms={(platformsData || []) as CatalogItem[]} 
+            formats={(formatsData || []) as CatalogItem[]} 
+            statuses={(statusesData || []) as CatalogItem[]} 
+          />
+        </div>
+
+      </div>
+      
+      {/* Renderizado de Resultados */}
       {games.length === 0 ? (
-        <EmptyState />
+        <EmptyState isFiltering={isFiltering} />
       ) : (
         isListView ? (
           <div className="flex flex-col gap-3">
@@ -73,78 +153,46 @@ export default async function HomePage({
   )
 }
 
-function PageHeader({ totalGames, isListView }: { totalGames: number, isListView: boolean }) {
-  return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-      <div className="flex items-center gap-4">
-        <h1 className="text-3xl font-extrabold tracking-tight text-slate-800 dark:text-white">Mi Backlog</h1>
-        <span className="bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 text-sm font-semibold px-3 py-1 rounded-full">
-          {totalGames} {totalGames === 1 ? 'Título' : 'Títulos'}
-        </span>
-      </div>
-      
-      <div className="flex bg-slate-200/60 dark:bg-slate-800/80 p-1 rounded-lg border border-slate-200 dark:border-slate-700 self-start sm:self-auto transition-colors">
-        <Link 
-          href="/?view=grid" 
-          className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${
-            !isListView ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-          }`}
-        >
-          Cuadrícula
-        </Link>
-        <Link 
-          href="/?view=list" 
-          className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${
-            isListView ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-          }`}
-        >
-          Lista
-        </Link>
-      </div>
-    </div>
-  )
-}
-
-function EmptyState() {
+function EmptyState({ isFiltering }: { isFiltering: boolean }) {
   return (
     <div className="text-center py-16 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm transition-colors">
-      <p className="text-slate-500 dark:text-slate-400 mb-4">Aún no tienes juegos en tu backlog.</p>
-      <Link href="/add" className="inline-block bg-blue-600 dark:bg-blue-500 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors">
-        Agrega tu primer juego
-      </Link>
+      {isFiltering ? (
+        <p className="text-slate-500 dark:text-slate-400 mb-4">No se encontraron juegos con estos filtros.</p>
+      ) : (
+        <>
+          <p className="text-slate-500 dark:text-slate-400 mb-4">Aún no tienes juegos en tu backlog.</p>
+          <Link href="/add" className="inline-block bg-blue-600 dark:bg-blue-500 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors">
+            Agrega tu primer juego
+          </Link>
+        </>
+      )}
     </div>
   )
 }
 
+// ... [Mantén los componentes GameListItem y GameCard que ya tenías sin cambios] ...
+
 function GameListItem({ game }: { game: GameResult }) {
+  // Código idéntico al que ya tienes
   return (
     <article className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-sm flex items-center p-3 hover:shadow-md dark:hover:shadow-slate-800/50 transition-all gap-4 overflow-hidden">
-      
       <div className="w-12 h-16 bg-slate-100 dark:bg-slate-800 rounded-md overflow-hidden flex-shrink-0 border border-slate-200 dark:border-slate-700">
         {game.cover_url ? (
           <img src={game.cover_url} alt={game.title} className="w-full h-full object-cover" />
         ) : (
-          <div className="flex items-center justify-center w-full h-full text-[10px] font-medium text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/50 text-center leading-tight">
-            Sin Img
-          </div>
+          <div className="flex items-center justify-center w-full h-full text-[10px] font-medium text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/50 text-center leading-tight">Sin Img</div>
         )}
       </div>
-
       <div className="flex-1 min-w-0">
-        <h2 className="text-base font-bold text-slate-800 dark:text-slate-100 truncate" title={game.title}>
-          {game.title}
-        </h2>
+        <h2 className="text-base font-bold text-slate-800 dark:text-slate-100 truncate" title={game.title}>{game.title}</h2>
         <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex flex-wrap gap-2 items-center font-medium">
           <span className="text-slate-700 dark:text-slate-300">{game.platform?.name || 'N/A'}</span>
           <span className="text-slate-300 dark:text-slate-600">•</span>
           <span>{game.game_format?.name || 'N/A'}</span>
           <span className="text-slate-300 dark:text-slate-600">•</span>
-          <span className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-1.5 py-0.5 rounded text-slate-700 dark:text-slate-300">
-            {game.status?.name || 'Sin estado'}
-          </span>
+          <span className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-1.5 py-0.5 rounded text-slate-700 dark:text-slate-300">{game.status?.name || 'Sin estado'}</span>
         </div>
       </div>
-
       <div className="flex items-center gap-4 sm:gap-8 pr-2">
         <span className="text-sm font-semibold text-amber-500 dark:text-amber-400 w-12 text-right hidden sm:block">
           {game.rating ? `★ ${game.rating}` : '-'}
@@ -153,34 +201,28 @@ function GameListItem({ game }: { game: GameResult }) {
           Editar
         </Link>
       </div>
-
     </article>
   )
 }
 
 function GameCard({ game }: { game: GameResult }) {
+  // Código idéntico al que ya tienes
   return (
     <article className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden flex flex-col hover:shadow-md dark:hover:shadow-slate-800/50 transition-all">
       <div className="h-48 bg-slate-100 dark:bg-slate-800 relative border-b border-slate-100 dark:border-slate-800">
         {game.cover_url ? (
           <img src={game.cover_url} alt={game.title} className="w-full h-full object-cover" />
         ) : (
-          <div className="flex items-center justify-center w-full h-full text-slate-400 dark:text-slate-500 font-medium text-sm">
-            Sin Portada
-          </div>
+          <div className="flex items-center justify-center w-full h-full text-slate-400 dark:text-slate-500 font-medium text-sm">Sin Portada</div>
         )}
         <div className="absolute top-2 right-2 bg-black/75 dark:bg-black/90 backdrop-blur-sm text-white text-xs font-bold px-2 py-1 rounded">
           {game.status?.name || 'Sin estado'}
         </div>
       </div>
       <div className="p-4 flex-1 flex flex-col">
-        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 line-clamp-1" title={game.title}>
-          {game.title}
-        </h2>
+        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 line-clamp-1" title={game.title}>{game.title}</h2>
         <div className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 flex gap-2 items-center font-medium">
-          <span className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded text-slate-700 dark:text-slate-300">
-            {game.platform?.name || 'N/A'}
-          </span>
+          <span className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded text-slate-700 dark:text-slate-300">{game.platform?.name || 'N/A'}</span>
           <span>•</span>
           <span>{game.game_format?.name || 'N/A'}</span>
         </div>
