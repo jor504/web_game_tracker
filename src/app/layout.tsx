@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, Cormorant_Garamond } from 'next/font/google'
 import Link from 'next/link'
 import './globals.css'
 import { createClient } from '@/utils/supabase/server'
@@ -7,11 +7,17 @@ import { logout } from '@/app/login/actions'
 import { ThemeProvider } from '@/components/theme-provider'
 import { ThemeToggle } from '@/components/theme-toggle'
 
-const inter = Inter({ subsets: ['latin'] })
+const body = Inter({ subsets: ['latin'], variable: '--font-sans', display: 'swap' })
+const display = Cormorant_Garamond({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-display',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
-  title: 'Game Backlog',
-  description: 'Gestor personal de videojuegos',
+  title: 'GameBacklog — Tu colección, organizada',
+  description: 'Lleva el control de los juegos que quieres jugar, estás jugando y terminaste. Tu backlog, con calma.',
 }
 
 export default async function RootLayout({
@@ -23,55 +29,98 @@ export default async function RootLayout({
   const { data: { user } } = await supabase.auth.getUser()
 
   return (
-    // suppressHydrationWarning es vital en el <html> al usar next-themes
-    <html lang="es" suppressHydrationWarning>
-      {/* Añadimos transiciones suaves y fondos que reaccionan al dark mode */}
-      <body className={`${inter.className} bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen flex flex-col antialiased transition-colors duration-300`}>
+    <html lang="es" suppressHydrationWarning className={`${body.variable} ${display.variable}`}>
+      <body className="font-sans text-fg min-h-screen flex flex-col antialiased">
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="light"
           enableSystem
           disableTransitionOnChange
         >
           <Header user={user} />
-          <main className="max-w-5xl mx-auto px-4 py-8 w-full flex-1">
+          <main className="relative flex-1 w-full">
             {children}
           </main>
+          <Footer />
         </ThemeProvider>
       </body>
     </html>
   )
 }
 
-function Header({ user }: { user: any }) {
+function Header({ user }: { user: { email?: string | null } | null }) {
   return (
-    <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10 shadow-sm transition-colors duration-300">
-      <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-        <Link href="/" className="font-bold text-xl tracking-tight text-blue-600 dark:text-blue-400">
-          GameBacklog
+    <header className="sticky top-0 z-40 bg-[var(--bg-base)]/85 backdrop-blur-md border-b border-[var(--line)]">
+      <div className="max-w-6xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between gap-6">
+        <Link href={user ? '/' : '/landing'} className="group flex items-baseline gap-2">
+          <span className="font-display text-2xl font-semibold tracking-[-0.01em] text-fg leading-none">
+            Game<span className="italic text-[var(--accent)]">Backlog</span>
+          </span>
+          <span className="hidden sm:inline text-[10px] uppercase tracking-[0.22em] text-subtle ml-1">n°01</span>
         </Link>
-        
-        <nav className="flex gap-4 items-center">
-          <ThemeToggle />
-          
+
+        <nav className="flex items-center gap-1 sm:gap-2">
           {user ? (
             <>
-              <Link href="/add" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-                + Agregar Juego
-              </Link>
+              <NavLink href="/" label="Backlog" />
+              <NavLink href="/add" label="Añadir" />
+              <span className="hidden md:inline text-xs text-subtle px-3 border-l border-[var(--line)] ml-1 max-w-[180px] truncate" title={user.email ?? ''}>
+                {user.email}
+              </span>
+              <ThemeToggle />
               <form action={logout}>
-                <button type="submit" className="text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                  Cerrar Sesión
+                <button
+                  type="submit"
+                  className="text-xs font-medium text-muted hover:text-[var(--accent)] transition-colors px-2.5 py-1.5"
+                >
+                  Salir
                 </button>
               </form>
             </>
           ) : (
-            <Link href="/login" className="text-sm font-medium bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
-              Iniciar Sesión
-            </Link>
+            <>
+              <NavLink href="/landing" label="Inicio" />
+              <ThemeToggle />
+              <Link
+                href="/login"
+                className="text-sm font-semibold text-[var(--bg-base)] bg-[var(--accent)] hover:bg-[var(--accent-strong)] transition-colors px-4 py-2 rounded-full"
+              >
+                Entrar
+              </Link>
+            </>
           )}
         </nav>
       </div>
     </header>
+  )
+}
+
+function NavLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="text-sm font-medium text-muted hover:text-fg transition-colors px-3 py-1.5 rounded-full"
+    >
+      {label}
+    </Link>
+  )
+}
+
+function Footer() {
+  return (
+    <footer className="mt-24 border-t border-[var(--line)]">
+      <div className="max-w-6xl mx-auto px-5 sm:px-8 py-10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-subtle">
+        <div className="flex items-center gap-2.5">
+          <span className="font-display italic text-sm text-muted">GameBacklog</span>
+          <span className="opacity-40">·</span>
+          <span>Una colección personal, con calma.</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span>© {new Date().getFullYear()}</span>
+          <span className="opacity-40">·</span>
+          <span>Hecho para jugadores.</span>
+        </div>
+      </div>
+    </footer>
   )
 }

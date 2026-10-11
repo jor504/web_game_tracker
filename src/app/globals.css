@@ -1,2 +1,282 @@
 @import "tailwindcss";
-@variant dark (&:where(.dark, .dark *));
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* =========================================================
+   GAMEBACKLOG — EDITORIAL CÁLIDO
+   Off-white surfaces, deep ink text, single warm accent
+   (terracotta/sienna). Editorial typography: serif display +
+   grotesque body. No neon, no aurora, no glass-morphism decoration.
+   ========================================================= */
+
+@theme {
+  /* Paper / cream */
+  --color-paper-50:  #fbf7f1;
+  --color-paper-100: #f6efe5;
+  --color-paper-200: #ece1cd;
+  --color-paper-300: #dcccae;
+  --color-paper-400: #c4ad84;
+  --color-paper-500: #a48963;
+
+  /* Ink (text & structure) */
+  --color-ink-50:  #f6f4ef;
+  --color-ink-100: #e6e0d4;
+  --color-ink-200: #c2b9a8;
+  --color-ink-300: #8c8273;
+  --color-ink-400: #5e574b;
+  --color-ink-500: #3b352c;
+  --color-ink-600: #2a2419;
+  --color-ink-700: #1c1810;
+  --color-ink-800: #14110a;
+  --color-ink-900: #0c0a05;
+
+  /* Accent — terracotta / sienna */
+  --color-clay-50:  #fdf3ec;
+  --color-clay-100: #f8dcc8;
+  --color-clay-200: #f1b890;
+  --color-clay-300: #e89262;
+  --color-clay-400: #db6e3a;
+  --color-clay-500: #c14f1e;
+  --color-clay-600: #9c3c14;
+  --color-clay-700: #752b0c;
+
+  /* Subtle secondary — mossy olive */
+  --color-moss-400: #74864f;
+  --color-moss-500: #5a6a3d;
+  --color-moss-600: #43512b;
+
+  /* Status */
+  --color-flame-500: #c14f1e;
+  --color-flame-600: #9c3c14;
+  --color-leaf-500: #5a6a3d;
+  --color-leaf-600: #43512b;
+  --color-rose-500: #b53b4a;
+  --color-rose-600: #8a2a37;
+  --color-sky-500: #4f6b8a;
+  --color-sky-600: #3a4f6a;
+
+  /* Typography */
+  --font-display: var(--font-display), "Cormorant Garamond", "Source Serif Pro", Georgia, serif;
+  --font-sans: var(--font-sans), "Inter", system-ui, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "SFMono-Regular", monospace;
+
+  /* Radii */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 18px;
+}
+
+/* =========================================================
+   BASE
+   ========================================================= */
+
+:root {
+  color-scheme: light;
+  --bg-base: #fbf7f1;
+  --bg-paper: #f6efe5;
+  --fg: #1c1810;
+  --fg-muted: #5e574b;
+  --fg-subtle: #8c8273;
+  --line: rgba(28, 24, 16, 0.1);
+  --line-strong: rgba(28, 24, 16, 0.18);
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-hover: rgba(28, 24, 16, 0.04);
+  --accent: var(--color-clay-500);
+  --accent-strong: var(--color-clay-600);
+  --accent-soft: rgba(193, 79, 30, 0.08);
+}
+
+:root.dark {
+  color-scheme: dark;
+  --bg-base: #14110a;
+  --bg-paper: #0c0a05;
+  --fg: #f6efe5;
+  --fg-muted: #c2b9a8;
+  --fg-subtle: #8c8273;
+  --line: rgba(246, 239, 229, 0.1);
+  --line-strong: rgba(246, 239, 229, 0.18);
+  --surface: #1c1810;
+  --surface-raised: #2a2419;
+  --surface-hover: rgba(246, 239, 229, 0.05);
+  --accent: var(--color-clay-300);
+  --accent-strong: var(--color-clay-400);
+  --accent-soft: rgba(232, 146, 98, 0.12);
+}
+
+* {
+  border-color: var(--line);
+}
+
+html, body {
+  background: var(--bg-base);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background-image: var(--bg-canvas, none);
+  background-attachment: fixed;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--fg);
+}
+
+input, select, textarea {
+  accent-color: var(--accent);
+}
+
+.font-display {
+  font-feature-settings: "ss01", "liga", "calt";
+  letter-spacing: -0.012em;
+}
+
+/* Scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+  background-clip: padding-box;
+  opacity: 0.5;
+}
+
+/* =========================================================
+   UTILITIES
+   ========================================================= */
+
+@utility paper {
+  background: var(--bg-paper);
+}
+
+@utility paper-edge {
+  background: linear-gradient(180deg, var(--bg-paper) 0%, var(--bg-base) 100%);
+}
+
+@utility hairline {
+  border: 1px solid var(--line);
+}
+
+@utility hairline-strong {
+  border: 1px solid var(--line-strong);
+}
+
+@utility text-fg { color: var(--fg); }
+@utility text-muted { color: var(--fg-muted); }
+@utility text-subtle { color: var(--fg-subtle); }
+
+@utility shadow-soft {
+  box-shadow: 0 1px 0 rgba(28, 24, 16, 0.04), 0 4px 16px -6px rgba(28, 24, 16, 0.08);
+}
+@utility shadow-card {
+  box-shadow: 0 1px 0 rgba(28, 24, 16, 0.04), 0 8px 24px -10px rgba(28, 24, 16, 0.12);
+}
+@utility shadow-elevated {
+  box-shadow: 0 1px 0 rgba(28, 24, 16, 0.04), 0 16px 40px -12px rgba(28, 24, 16, 0.18);
+}
+
+:root.dark .shadow-soft,
+:root.dark .shadow-card,
+:root.dark .shadow-elevated {
+  box-shadow: 0 1px 0 rgba(0,0,0,0.4), 0 8px 24px -10px rgba(0,0,0,0.5);
+}
+
+/* Hide number input arrows */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] { -moz-appearance: textfield; }
+
+/* =========================================================
+   ANIMATIONS
+   ========================================================= */
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.anim-fade-up { animation: fade-up 0.7s var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) both; }
+.anim-fade-in { animation: fade-in 0.8s var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) both; }
+
+.stagger > * {
+  animation: fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.stagger > *:nth-child(1) { animation-delay: 0.04s; }
+.stagger > *:nth-child(2) { animation-delay: 0.10s; }
+.stagger > *:nth-child(3) { animation-delay: 0.16s; }
+.stagger > *:nth-child(4) { animation-delay: 0.22s; }
+.stagger > *:nth-child(5) { animation-delay: 0.28s; }
+.stagger > *:nth-child(6) { animation-delay: 0.34s; }
+.stagger > *:nth-child(7) { animation-delay: 0.40s; }
+.stagger > *:nth-child(8) { animation-delay: 0.46s; }
+.stagger > *:nth-child(9) { animation-delay: 0.52s; }
+.stagger > *:nth-child(10) { animation-delay: 0.58s; }
+.stagger > *:nth-child(11) { animation-delay: 0.64s; }
+.stagger > *:nth-child(12) { animation-delay: 0.70s; }
+
+/* Card hover lift */
+.lift {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.4s ease;
+}
+.lift:hover {
+  transform: translateY(-2px);
+}
+
+/* Editorial rule — thin hairline divider used between sections */
+.editorial-rule {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--fg-subtle);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.editorial-rule::before,
+.editorial-rule::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+/* Cover fallback (no image) */
+.cover-fallback {
+  background:
+    linear-gradient(135deg,
+      color-mix(in oklab, var(--accent) 25%, var(--bg-paper)) 0%,
+      var(--bg-paper) 100%);
+}
+
+/* Number badge — editorial figure for stat callouts */
+.figure-num {
+  font-family: var(--font-display);
+  font-variant-numeric: oldstyle-nums;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}

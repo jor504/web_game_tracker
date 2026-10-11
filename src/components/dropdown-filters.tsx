@@ -22,56 +22,57 @@ export function DropdownFilters({ platforms, formats, statuses }: Props) {
   const currentFormat = searchParams.get('format') || ''
   const currentStatus = searchParams.get('status') || ''
 
-  // Función genérica para actualizar la URL
   const handleFilterChange = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString())
-    if (value) {
-      params.set(key, value)
-    } else {
-      params.delete(key)
-    }
+    if (value) params.set(key, value)
+    else params.delete(key)
     router.push(`${pathname}?${params.toString()}`)
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
-      
-      {/* Filtro de Plataforma */}
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full">
+      <FilterSelect label="Plataforma" value={currentPlatform} onChange={(v) => handleFilterChange('platform', v)} options={platforms} />
+      <FilterSelect label="Formato" value={currentFormat} onChange={(v) => handleFilterChange('format', v)} options={formats} />
+      <FilterSelect label="Estado" value={currentStatus} onChange={(v) => handleFilterChange('status', v)} options={statuses} />
+    </div>
+  )
+}
+
+function FilterSelect({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  options: CatalogItem[]
+}) {
+  return (
+    <div className="relative">
+      <label className="sr-only">{label}</label>
       <select
-        value={currentPlatform}
-        onChange={(e) => handleFilterChange('platform', e.target.value)}
-        className="border border-slate-300 dark:border-slate-700 p-2 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none transition-colors text-sm appearance-none shadow-sm cursor-pointer"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full appearance-none bg-transparent border border-[var(--line)] pl-3.5 pr-9 py-2.5 rounded-lg text-fg focus:outline-none focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent-soft)] transition-all text-sm cursor-pointer"
       >
-        <option value="">Todas las plataformas</option>
-        {platforms.map((p) => (
-          <option key={p.id} value={p.id}>{p.name}</option>
+        <option value="">{label}</option>
+        {options.map((o) => (
+          <option key={o.id} value={o.id}>{o.name}</option>
         ))}
       </select>
-
-      {/* Filtro de Formato */}
-      <select
-        value={currentFormat}
-        onChange={(e) => handleFilterChange('format', e.target.value)}
-        className="border border-slate-300 dark:border-slate-700 p-2 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none transition-colors text-sm appearance-none shadow-sm cursor-pointer"
+      <svg
+        className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-subtle pointer-events-none"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       >
-        <option value="">Todos los formatos</option>
-        {formats.map((f) => (
-          <option key={f.id} value={f.id}>{f.name}</option>
-        ))}
-      </select>
-
-      {/* Filtro de Estado */}
-      <select
-        value={currentStatus}
-        onChange={(e) => handleFilterChange('status', e.target.value)}
-        className="border border-slate-300 dark:border-slate-700 p-2 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none transition-colors text-sm appearance-none shadow-sm cursor-pointer"
-      >
-        <option value="">Todos los estados</option>
-        {statuses.map((s) => (
-          <option key={s.id} value={s.id}>{s.name}</option>
-        ))}
-      </select>
-
+        <path d="m6 9 6 6 6-6"/>
+      </svg>
     </div>
   )
 }

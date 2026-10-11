@@ -16,7 +16,13 @@ export async function searchGamesInRAWG(query: string) {
     const data = await res.json()
 
     // Mapeamos la respuesta para adaptarla a la estructura de nuestro backlog
-    return data.results.map((game: any) => ({
+    type RawgGame = {
+      id: number
+      name: string
+      background_image: string | null
+      released: string | null
+    }
+    return (data.results as RawgGame[]).map((game) => ({
       rawg_id: game.id,
       title: game.name,
       cover_url: game.background_image,

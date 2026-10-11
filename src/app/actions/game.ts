@@ -14,8 +14,6 @@ export async function addGame(formData: FormData) {
     throw new Error('Debes iniciar sesión para agregar juegos al backlog.')
   }
 
-  const id = formData.get('id') as string
-
   // 2. Extraer los datos del formulario web
   const newGame = {
     title: formData.get('title') as string,
